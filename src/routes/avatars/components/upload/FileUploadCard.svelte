@@ -11,7 +11,7 @@
     const avatars = await transmogrify(event.currentTarget.files)
 
     if (avatars.length > 0) {
-      dispatch('save', { avatar: avatars[0] })
+      dispatch('save', { avatars })
     }
 
     input['value'] = null
@@ -31,7 +31,7 @@
     bind:this={input}
     id="upload-file"
     type="file"
-    multiple={false}
+    multiple={true}
     accept="image/*"
     class="hidden"
     on:input={handleFileInput}

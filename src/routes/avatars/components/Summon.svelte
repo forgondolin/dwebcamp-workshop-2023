@@ -19,82 +19,31 @@
   })
 
   async function loadAvatars() {
-    if (fs) {
-      /**
-       * Load stored avatars from the file system.
-       *
-       * We want to load and display avatars when we view the summon tab.
-       * In this activity, we'll get a listing of the contents in the
-       * avatars directory. We've provided code for parsing the listing
-       * into an array of avatars.
-       */
+  if (fs) {
+    const path = odd.path.directory('public', 'avatars')
+    const exists = await fs.exists(path)
 
-      /**
-       * TODO Create a path object for the avatars directory. See
-       * the instructions in Transmogrify.svelte and complete the Transmogrify
-       * exercises before starting this one.
-       *
-       * See the path documentation for path examples: https://docs.odd.dev/file-system-wnfs#paths
-       */
-      const path = null
-
-      /**
-       * TODO List the contents of the avatars directory.
-       *
-       * The file system interface has a function to list directory contents:
-       * https://docs.odd.dev/file-system-wnfs#ls
-       *
-       * To be safe, check that the directory exists before listing its contents.
-       */
-      const exists = null
-
-      if (exists) {
-        // TODO List the contents of the avatars directory
-        const listing = null
-
-        avatars = await getAvatarsFromListing(listing, fs)
-      }
+    if (exists) {
+      const listing = await fs.ls(path)
+      avatars = await getAvatarsFromListing(listing, fs)
     }
   }
+}
 
-  async function deleteAvatar(event: CustomEvent<{ avatar: Avatar }>) {
-    const { avatar } = event.detail
+async function deleteAvatar(event: CustomEvent<{ avatar: Avatar }>) {
+  const { avatar } = event.detail
 
-    console.log('Avatar to delete:', avatar)
+  if (fs) {
+    const path = odd.path.file('public', 'avatars', `${avatar.name}`)
 
-    if (fs) {
-      /**
-       * Delete an avatar from the avatars directory.
-       */
+    await fs.rm(path)
+    await fs.publish()
 
-      /**
-       * TODO Create a file path for the avatar. The file path should include each
-       * path segment from the avatars directory followed by the file name.
-       *
-       * See the path documentation for path examples: https://docs.odd.dev/file-system-wnfs#paths
-       */
-      const path = null
+    loadAvatars()
 
-      /**
-       * Delete the file from the avatars directory.
-       *
-       * The file system interface has a delete function for deleting files:
-       * https://docs.odd.dev/file-system-wnfs#rm
-       *
-       * Use the path we created above to delete the file.
-       */
-
-      // TODO Delete the file
-
-      // Publish the change to IPFS
-      await fs.publish()
-
-      /**
-       * This function checks your answer and logs the result to the devtools console.
-       */
-      await checkDeleteAvatar(fs, avatar.name)
-    }
+    await checkDeleteAvatar(fs, avatar.name)
   }
+}
 
   async function copyCID(event: CustomEvent<{ fileName: string }>) {
     const { fileName } = event.detail
@@ -111,45 +60,29 @@
   }
 
   async function openLink(event: CustomEvent<{ fileName: string }>) {
-    const { fileName } = event.detail
+  const { fileName } = event.detail
 
-    if (fs) {
-      const cid = await getContentCID(fileName, fs)
+  if (fs) {
+    const cid = await getContentCID(fileName, fs)
+    const url = `https://ipfs.runfission.com/ipfs/${cid}/userland`
 
-      /**
-       * We can view data on IPFS using an HTTP gateway. Content on IPFS
-       * is distributed across IPFS nodes, which means we can view data on
-       * any IPFS node that exposes an HTTP gateway.
-       *
-       * TODO The URL below links to a avatar on the Fission HTTP gateway.
-       * Replace "ipfs.runfission.com" with "ipfs.io" to view the avatar on
-       * the Protocol Labs HTTP gateway.
-       */
-      const url = `https://ipfs.runfission.com/ipfs/${cid}/userland`
-
-      window.open(url, '_newtab')
-    }
+    window.open(url, '_newtab')
   }
+}
 
-  async function addAvatar() {
-    /**
-     * OPTIONAL ADVANCED ACTIVITY
-     *
-     * Add a an avatar loaded by CID from an HTTP gateway.
-     *
-     * The openLink function above shows how to view avatars on IPFS
-     * once saved to the file system and published. We can also load an
-     * avatar from an HTTP gateway and add it to our collection.
-     *
-     * Fetch an avatar using the cidQuery variable and write it to the
-     * avatars directory. The avatar will be a Blob with a blob.type that
-     * contains it MIME type. The file name won't be available, but we can use
-     * the CID for the file name with an extension derived from blob.type.
-     *
-     * You won't be able to add an avatar that is already in your file
-     * system, so ask one of your neighbors for a CID to test your implementation.
-     */
-  }
+async function addAvatar() {
+  const response = await fetch(`https://ipfs.runfission.com/ipfs/${cidQuery}/userland`)
+  const blob = await response.blob()
+  const file = new File([ blob ], cidQuery )
+  const extension = blob.type.split('/')[1]
+
+  const path = odd.path.file('public', 'avatars', `${cidQuery}.${extension}`)
+  const bytes = await fileToUint8Array(file) 
+  await fs.write(path, bytes)
+  await fs.publish()
+
+  await loadAvatars()
+}
 
   $: {
     // Open modal when an avatar is selected
